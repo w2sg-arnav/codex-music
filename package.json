@@ -1,0 +1,23 @@
+{
+  "name": "codex-music",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-native music editing studio for the web.",
+  "scripts": {
+    "dev": "concurrently -n web,api -c magenta,cyan \"npm --prefix apps/web run dev\" \"uv run --directory apps/api uvicorn codex_music_api.main:app --reload --host 0.0.0.0 --port 8000\"",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "uv run --directory apps/api uvicorn codex_music_api.main:app --reload --host 0.0.0.0 --port 8000",
+    "build:web": "npm --prefix apps/web run build",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "lint:web": "npm --prefix apps/web run lint",
+    "typecheck:web": "npm --prefix apps/web run typecheck",
+    "lint:api": "uv run --directory apps/api ruff check src",
+    "format:api": "uv run --directory apps/api ruff format src",
+    "typecheck:api": "uv run --directory apps/api mypy src",
+    "setup:api": "uv sync --directory apps/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

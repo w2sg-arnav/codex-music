@@ -1,0 +1,319 @@
+@import "tailwindcss";
+
+:root {
+  --background: #060707;
+  --foreground: #f3f1ea;
+  --foreground-soft: #d8d2c6;
+  --muted: #9f9a8e;
+  --line: rgba(183, 175, 156, 0.16);
+  --line-strong: rgba(210, 201, 181, 0.28);
+  --card: rgba(11, 12, 13, 0.74);
+  --card-strong: rgba(15, 16, 18, 0.92);
+  --card-soft: rgba(20, 22, 25, 0.88);
+  --accent: #c5a76b;
+  --accent-strong: #f0dcc0;
+  --accent-secondary: #56b6a5;
+  --shadow: 0 28px 70px rgba(0, 0, 0, 0.4);
+  --hero-shadow: 0 44px 140px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+html {
+  background:
+    radial-gradient(circle at 16% 16%, rgba(197, 167, 107, 0.12), transparent 26%),
+    radial-gradient(circle at 88% 12%, rgba(86, 182, 165, 0.1), transparent 20%),
+    radial-gradient(circle at 50% 115%, rgba(173, 132, 69, 0.08), transparent 22%),
+    linear-gradient(180deg, #050606 0%, #070809 34%, #060707 100%);
+}
+
+body {
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-display), sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.site-shell {
+  position: relative;
+}
+
+.site-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(181, 173, 155, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(181, 173, 155, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.75), transparent 95%);
+  opacity: 0.32;
+  z-index: -2;
+}
+
+.site-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(197, 167, 107, 0.1), transparent 32%),
+    radial-gradient(circle at 100% 0%, rgba(86, 182, 165, 0.08), transparent 22%);
+  z-index: -1;
+}
+
+::selection {
+  background: rgba(197, 167, 107, 0.28);
+}
+
+.glass-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 30%),
+    var(--card);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(86, 182, 165, 0.12), transparent 28%),
+    radial-gradient(circle at 12% 0%, rgba(197, 167, 107, 0.14), transparent 18%),
+    linear-gradient(180deg, rgba(11, 12, 13, 0.98), rgba(13, 15, 17, 0.9));
+  border: 1px solid rgba(196, 186, 166, 0.16);
+  box-shadow: var(--hero-shadow);
+}
+
+.hero-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 22%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: auto, 64px 64px, 64px 64px;
+  opacity: 0.55;
+}
+
+.surface-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.section-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.panel-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.eyebrow {
+  color: var(--accent-strong);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.76rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.site-divider {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(148, 163, 184, 0.22),
+    transparent
+  );
+}
+
+.inventory-card {
+  border: 1px solid var(--line);
+  background: rgba(14, 15, 17, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.hero-stat {
+  border: 1px solid rgba(183, 175, 156, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+}
+
+.site-shell a,
+.site-shell button,
+.site-shell input,
+.site-shell select,
+.site-shell textarea {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.site-shell input,
+.site-shell select,
+.site-shell textarea {
+  color-scheme: dark;
+}
+
+.site-shell audio {
+  filter: saturate(0.9) brightness(0.92);
+}
+
+.site-shell .text-stone-950 {
+  color: var(--foreground);
+}
+
+.site-shell .text-stone-900 {
+  color: #f2eee5;
+}
+
+.site-shell .text-stone-800 {
+  color: #e1dbcf;
+}
+
+.site-shell .text-stone-700 {
+  color: #c3bcaf;
+}
+
+.site-shell .text-stone-600 {
+  color: #a59f93;
+}
+
+.site-shell .text-stone-500 {
+  color: #8a857a;
+}
+
+.site-shell .text-emerald-900 {
+  color: #c8f0e6;
+}
+
+.site-shell .text-emerald-800 {
+  color: #9fd5c9;
+}
+
+.site-shell .text-amber-900 {
+  color: #f1d4a3;
+}
+
+.site-shell .bg-stone-50 {
+  background: var(--card-soft);
+}
+
+.site-shell .bg-stone-100 {
+  background: rgba(20, 22, 25, 0.92);
+}
+
+.site-shell .bg-stone-200 {
+  background: rgba(30, 33, 37, 0.94);
+}
+
+.site-shell .bg-white {
+  background: rgba(17, 18, 20, 0.97);
+}
+
+.site-shell .bg-white\/70 {
+  background: rgba(18, 20, 23, 0.82);
+}
+
+.site-shell .bg-stone-100\/80 {
+  background: rgba(22, 25, 28, 0.84);
+}
+
+.site-shell .bg-emerald-100 {
+  background: rgba(20, 58, 50, 0.9);
+}
+
+.site-shell .bg-amber-100 {
+  background: rgba(72, 51, 20, 0.9);
+}
+
+.site-shell .bg-stone-950 {
+  background:
+    linear-gradient(135deg, rgba(197, 167, 107, 0.12), rgba(86, 182, 165, 0.06)),
+    rgba(12, 13, 15, 0.98);
+  border-color: rgba(189, 180, 162, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 40px rgba(0, 0, 0, 0.34);
+}
+
+.site-shell .bg-stone-950\/90 {
+  background: rgba(11, 12, 14, 0.94);
+}
+
+.site-shell .bg-stone-950\/6 {
+  background: rgba(138, 180, 255, 0.12);
+}
+
+.site-shell .border-stone-200 {
+  border-color: rgba(143, 158, 180, 0.18);
+}
+
+.site-shell .border-stone-300 {
+  border-color: rgba(143, 158, 180, 0.28);
+}
+
+.site-shell .border-stone-400 {
+  border-color: rgba(166, 182, 205, 0.42);
+}
+
+.site-shell .border-emerald-100 {
+  border-color: rgba(94, 234, 174, 0.22);
+}
+
+.site-shell .hover\:bg-stone-100:hover,
+.site-shell .hover\:bg-stone-100\/80:hover {
+  background: rgba(29, 39, 57, 0.94);
+}
+
+.site-shell .hover\:bg-stone-800:hover {
+  background: rgba(17, 23, 34, 0.96);
+}
+
+.site-shell .hover\:border-stone-400:hover,
+.site-shell .hover\:border-stone-900:hover {
+  border-color: rgba(187, 202, 228, 0.52);
+}
+
+.site-shell .focus\:border-stone-900:focus {
+  border-color: rgba(146, 180, 255, 0.7);
+  box-shadow: 0 0 0 4px rgba(138, 180, 255, 0.12);
+}
+
+.site-shell .disabled\:bg-stone-400:disabled {
+  background: rgba(55, 66, 85, 0.92);
+  box-shadow: none;
+}
+
+.site-shell .disabled\:border-stone-200:disabled {
+  border-color: rgba(94, 105, 125, 0.2);
+}
+
+.site-shell .disabled\:text-stone-400:disabled {
+  color: rgba(129, 144, 164, 0.55);
+}
+
+@media (max-width: 768px) {
+  .site-shell::before {
+    background-size: 40px 40px;
+  }
+}

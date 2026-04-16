@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: codex-music-api
+    runtime: docker
+    rootDir: apps/api
+    healthCheckPath: /healthz
+    envVars:
+      - key: CODEX_MUSIC_ENVIRONMENT
+        value: production
+      - key: CODEX_MUSIC_STORAGE_BACKEND
+        value: local
+      - key: CODEX_MUSIC_PUBLIC_API_URL
+        value: https://codex-music-api.onrender.com
+      - key: CODEX_MUSIC_PUBLIC_WEB_URL
+        value: https://codex-music-web.onrender.com
+      - key: CODEX_MUSIC_WEB_ORIGIN
+        value: https://codex-music-web.onrender.com
+      - key: CODEX_MUSIC_DATA_DIR
+        value: /app/data
+      - key: CODEX_MUSIC_MEDIA_DIR
+        value: /app/media
+      - key: CODEX_MUSIC_AUDIO_PROVIDER_API_KEY
+        sync: false
+      - key: CODEX_MUSIC_MUSIC_AI_API_KEY
+        sync: false
+      - key: CODEX_MUSIC_CLEANUP_PROVIDER_API_KEY
+        sync: false
+      - key: CODEX_MUSIC_FAL_KEY
+        sync: false
+      - key: CODEX_MUSIC_STRIPE_SECRET_KEY
+        sync: false
+      - key: CODEX_MUSIC_STORAGE_BUCKET
+        sync: false
+    buildFilter:
+      paths:
+        - apps/api/**
+        - render.yaml
+        - .env.example
+
+  - type: web
+    name: codex-music-web
+    runtime: docker
+    rootDir: apps/web
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://codex-music-api.onrender.com
+    buildFilter:
+      paths:
+        - apps/web/**
+        - package.json
+        - package-lock.json
+        - render.yaml

@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      CODEX_MUSIC_ENVIRONMENT: development
+      CODEX_MUSIC_WEB_ORIGIN: http://127.0.0.1:3000
+      CODEX_MUSIC_PUBLIC_WEB_URL: http://127.0.0.1:3000
+      CODEX_MUSIC_PUBLIC_API_URL: http://127.0.0.1:8000
+      CODEX_MUSIC_DATA_DIR: /app/data
+      CODEX_MUSIC_MEDIA_DIR: /app/media
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api/data:/app/data
+      - ./apps/api/media:/app/media
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
