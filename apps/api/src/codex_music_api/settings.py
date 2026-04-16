@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     cleanup_provider_api_key: str = Field(default="")
     generation_provider: str = Field(default="ace-step-via-fal")
     fal_key: str = Field(default="")
+    openai_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("CODEX_MUSIC_OPENAI_API_KEY", "OPENAI_API_KEY"),
+    )
+    openai_model: str = Field(default="gpt-4.1")
+    prompt_model_provider: str = Field(default="heuristic-director")
+    critic_model_provider: str = Field(default="music-critic-agent")
+    refinement_threshold: float = Field(default=7.8)
+    refinement_max_iterations: int = Field(default=3)
     provenance_backend: str = Field(default="c2pa")
     job_execution_mode: Literal["threaded", "inline"] = Field(default="threaded")
     stripe_secret_key: str = Field(default="")

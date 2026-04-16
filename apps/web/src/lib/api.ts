@@ -78,6 +78,7 @@ export type AnalysisSummary = {
   bridge_notes: string[];
   sections: ArrangementSection[];
   critic: CriticScores | null;
+  refinement_loop: RefinementLoopSummary | null;
   provider: string;
 };
 
@@ -98,6 +99,31 @@ export type CriticScores = {
   average: number;
   verdict: string;
   notes: string[];
+};
+
+export type GenerationVersion = {
+  id: string;
+  iteration: number;
+  prompt_text: string;
+  enhanced_prompt: string;
+  audio_path: string | null;
+  provider: string;
+  critic: CriticScores | null;
+  passed_threshold: boolean;
+  rewrite_brief: string | null;
+  improvement_suggestions: string[];
+  selected_for_editing: boolean;
+};
+
+export type RefinementLoopSummary = {
+  status: "idle" | "running" | "passed" | "needs-review";
+  prompt_model: string;
+  critic_model: string;
+  threshold: number;
+  max_iterations: number;
+  strict_guidelines: string[];
+  selected_version_id: string | null;
+  versions: GenerationVersion[];
 };
 
 export type RightsSummary = {
@@ -289,4 +315,8 @@ export function resolveApiUrl(path: string | null): string | null {
 
 export function getProjectExportBundleUrl(projectId: string): string {
   return `${API_BASE_URL}/api/v1/projects/${projectId}/export-bundle`;
+}
+
+export function getProjectEventsUrl(projectId: string): string {
+  return `${API_BASE_URL}/api/v1/projects/${projectId}/events`;
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import re
+import time
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -26,6 +27,8 @@ from codex_music_api.schemas import (
 from codex_music_api.settings import get_settings
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from codex_music_api.repository import StudioRepository
     from codex_music_api.settings import Settings
     from codex_music_api.storage import LocalMediaStorage
@@ -63,6 +66,59 @@ def get_project(
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     return project
+
+
+@router.get("/{project_id}/events")
+def stream_project_events(
+    project_id: str,
+    repository: ProjectRepository,
+) -> StreamingResponse:
+    """Stream live project updates for the generation and prep loop."""
+
+    project = repository.get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    def event_stream() -> Iterator[bytes]:
+        last_payload: str | None = None
+        for _ in range(120):
+            latest = repository.get_project(project_id)
+            if latest is None:
+                break
+
+            payload = json.dumps(
+                {
+                    "id": latest.id,
+                    "status": latest.status,
+                    "jobs": [job.model_dump(mode="json") for job in latest.jobs],
+                    "refinement_loop": (
+                        latest.analysis.refinement_loop.model_dump(mode="json")
+                        if latest.analysis.refinement_loop
+                        else None
+                    ),
+                    "updated_at": latest.updated_at,
+                }
+            )
+            if payload != last_payload:
+                yield f"event: project\ndata: {payload}\n\n".encode()
+                last_payload = payload
+
+            active_jobs = any(job.status in {"queued", "running"} for job in latest.jobs)
+            if latest.status in {"ready", "attention"} and not active_jobs:
+                break
+            time.sleep(1)
+
+        yield b"event: end\ndata: {}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/import", response_model=ProjectImportResponse, status_code=status.HTTP_201_CREATED)

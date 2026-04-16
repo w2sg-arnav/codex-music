@@ -251,28 +251,29 @@ def build_architecture_plan(settings: Settings) -> ArchitecturePlanResponse:
                 components=[
                     ArchitectureComponent(
                         name="Prompt enhancer",
-                        status="planned",
+                        status="live",
                         runtime="api",
                         description=(
-                            "Will map casual prompts into structure-aware ACE tags "
-                            "and lyric scaffolds."
+                            "Prompt-led sessions now pass through a strict music-brief "
+                            "rewriter before each generation attempt."
                         ),
                     ),
                     ArchitectureComponent(
                         name=f"ACE-Step generation via {settings.generation_provider}",
-                        status="demo",
+                        status="live" if settings.fal_key else "demo",
                         runtime="worker",
                         description=(
-                            "Generation lane is scaffolded now and will become real "
-                            "once FAL credentials are added."
+                            "Generation lane now creates candidate versions and hands the "
+                            "selected pass into the editor."
                         ),
                     ),
                     ArchitectureComponent(
                         name="Built-in stem separation",
-                        status="planned",
+                        status="demo",
                         runtime="worker",
                         description=(
-                            "Generated audio will immediately feed the stem prep path for editing."
+                            "Generated audio immediately feeds stem prep, with hosted provider "
+                            "fallbacks still being hardened."
                         ),
                     ),
                 ],
@@ -304,11 +305,11 @@ def build_architecture_plan(settings: Settings) -> ArchitecturePlanResponse:
                     ),
                     ArchitectureComponent(
                         name="Reference context builder",
-                        status="planned",
+                        status="live",
                         runtime="api",
                         description=(
-                            "Will package extracted structure into constraints for "
-                            "the director layer."
+                            "Prompt, reference, and critic feedback now become reusable "
+                            "constraints for downstream editing and steering."
                         ),
                     ),
                 ],
@@ -366,18 +367,20 @@ def build_architecture_plan(settings: Settings) -> ArchitecturePlanResponse:
                 components=[
                     ArchitectureComponent(
                         name="AI music critic",
-                        status="planned",
+                        status="live",
                         runtime="worker",
                         description=(
-                            "Will score fidelity, production, emotion, and technical quality."
+                            "The critic now scores fidelity, musicality, emotion, "
+                            "production, and technical quality for each generation pass."
                         ),
                     ),
                     ArchitectureComponent(
                         name="Refinement orchestrator",
-                        status="planned",
+                        status="live",
                         runtime="worker",
                         description=(
-                            "Will manage bounded rewrite loops before surfacing approved results."
+                            "A bounded rewrite loop now regenerates drafts until the threshold "
+                            "passes or the iteration limit is reached."
                         ),
                     ),
                 ],

@@ -122,6 +122,35 @@ class CriticScores(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class GenerationVersion(BaseModel):
+    """One generated draft surfaced to the user during prompt refinement."""
+
+    id: str
+    iteration: int
+    prompt_text: str
+    enhanced_prompt: str
+    audio_path: str | None = None
+    provider: str
+    critic: CriticScores | None = None
+    passed_threshold: bool = False
+    rewrite_brief: str | None = None
+    improvement_suggestions: list[str] = Field(default_factory=list)
+    selected_for_editing: bool = False
+
+
+class RefinementLoopSummary(BaseModel):
+    """Closed-loop generation state from prompt enhancement through critic review."""
+
+    status: Literal["idle", "running", "passed", "needs-review"] = "idle"
+    prompt_model: str = "heuristic-director"
+    critic_model: str = "music-critic-agent"
+    threshold: float = 7.8
+    max_iterations: int = 3
+    strict_guidelines: list[str] = Field(default_factory=list)
+    selected_version_id: str | None = None
+    versions: list[GenerationVersion] = Field(default_factory=list)
+
+
 class AnalysisSummary(BaseModel):
     """Structured music analysis returned for a project."""
 
@@ -137,6 +166,7 @@ class AnalysisSummary(BaseModel):
     bridge_notes: list[str] = Field(default_factory=list)
     sections: list[ArrangementSection] = Field(default_factory=list)
     critic: CriticScores | None = None
+    refinement_loop: RefinementLoopSummary | None = None
     provider: str = "demo"
 
 

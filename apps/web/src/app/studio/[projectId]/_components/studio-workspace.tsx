@@ -8,6 +8,7 @@ import {
   type ProjectDetail,
   type StackChoice,
   getProject,
+  getProjectEventsUrl,
   getProjectExportBundleUrl,
   runCleanupPass,
   runStudioPrep,
@@ -19,6 +20,7 @@ import { MidiLab } from "./midi-lab";
 import { StemMixer } from "./stem-mixer";
 import { TimelineEditor } from "./timeline-editor";
 import { WaveformPlayer } from "./waveform-player";
+import { GenerationLoopPanel } from "./generation-loop-panel";
 import { PerformanceMode } from "../performance/_components/performance-mode";
 
 type WorkspaceView = "overview" | "edit" | "performance";
@@ -91,6 +93,9 @@ function workspaceSurfaces(project: ProjectDetail) {
   if (project.polished_audio_path) {
     surfaces.push("Polished preview and A/B compare");
   }
+  if (project.analysis.refinement_loop || project.source_type !== "upload") {
+    surfaces.push("Prompt enhancement, critic scoring, and surfaced generation versions");
+  }
   if (project.stems.length > 0) {
     surfaces.push("Stem mixer with lane playback");
     surfaces.push("Non-destructive multitrack timeline");
@@ -145,6 +150,14 @@ export function StudioWorkspace({
     () => stackChoices.filter((choice) => choice.stage === "now").slice(0, 8),
     [stackChoices],
   );
+  const refinementLoop = project.analysis.refinement_loop;
+  const selectedVersion = useMemo(
+    () =>
+      refinementLoop?.versions.find((version) => version.selected_for_editing) ??
+      refinementLoop?.versions[0] ??
+      null,
+    [refinementLoop],
+  );
   const activeJobs = useMemo(
     () =>
       project.jobs.filter((job) => job.status === "queued" || job.status === "running").length,
@@ -171,12 +184,27 @@ export function StudioWorkspace({
       return;
     }
 
-    const intervalId = window.setInterval(() => {
-      void refreshProject();
-    }, 1500);
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      const eventSource = new EventSource(getProjectEventsUrl(project.id));
+      const refreshFromEvent = () => {
+        void refreshProject();
+      };
+
+      eventSource.addEventListener("project", refreshFromEvent);
+      eventSource.addEventListener("end", refreshFromEvent);
+      eventSource.onerror = () => {
+        eventSource.close();
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    }
+
+    const intervalId = globalThis.setInterval(() => void refreshProject(), 1500);
 
     return () => {
-      window.clearInterval(intervalId);
+      globalThis.clearInterval(intervalId);
     };
   }, [project]);
 
@@ -647,6 +675,8 @@ export function StudioWorkspace({
               ) : null}
             </article>
 
+            <GenerationLoopPanel project={project} />
+
             <article className="glass-card rounded-[1.5rem] p-6">
               <p className="eyebrow">Jobs</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
@@ -752,6 +782,53 @@ export function StudioWorkspace({
       {activeView === "edit" ? (
         <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
           <div className="space-y-6">
+            {selectedVersion ? (
+              <article className="glass-card rounded-[1.5rem] p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="eyebrow">Editor Handoff</p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
+                      Version {selectedVersion.iteration} is now feeding the editor
+                    </h2>
+                    <p className="mt-2 max-w-4xl text-sm leading-7 text-stone-700">
+                      The selected generation is now the source for stem prep, waveform review,
+                      and lockable timeline edits. You can keep strong sections locked while
+                      steering the arrangement further or layering new instrumental ideas.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusPill label={selectedVersion.provider} tone="neutral" />
+                    {selectedVersion.critic ? (
+                      <StatusPill
+                        label={`${selectedVersion.critic.average.toFixed(1)} critic`}
+                        tone={criticTone(selectedVersion.critic.average)}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                  <div className="rounded-[1.1rem] border border-stone-300 bg-stone-100 p-4">
+                    <p className="text-sm text-stone-500">Enhanced prompt</p>
+                    <p className="mt-3 text-sm leading-7 text-stone-700">
+                      {selectedVersion.enhanced_prompt}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.1rem] border border-stone-300 bg-stone-100 p-4">
+                    <p className="text-sm text-stone-500">Steering notes</p>
+                    <ul className="mt-3 space-y-2 text-sm leading-7 text-stone-700">
+                      {selectedVersion.improvement_suggestions.length > 0 ? (
+                        selectedVersion.improvement_suggestions.map((suggestion) => (
+                          <li key={suggestion}>{suggestion}</li>
+                        ))
+                      ) : (
+                        <li>This version cleared the loop without extra rewrite guidance.</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </article>
+            ) : null}
+
             <div className="grid gap-6 2xl:grid-cols-2">
               <WaveformPlayer
                 audioPath={project.audio_path}

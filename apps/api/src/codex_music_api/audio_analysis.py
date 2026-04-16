@@ -389,8 +389,7 @@ def _build_arrangement_notes(
     notes: list[str] = []
     rms = _frame_rms(waveform)
     energy_chunks = [
-        float(np.mean(chunk)) if chunk.size > 0 else 0.0
-        for chunk in np.array_split(rms, 3)
+        float(np.mean(chunk)) if chunk.size > 0 else 0.0 for chunk in np.array_split(rms, 3)
     ]
     if energy_chunks:
         peak_chunk = int(np.argmax(energy_chunks))
@@ -406,8 +405,7 @@ def _build_arrangement_notes(
 
     centroid = _spectral_centroid(magnitude, frequencies)
     centroid_chunks = [
-        float(np.mean(chunk)) if chunk.size > 0 else 0.0
-        for chunk in np.array_split(centroid, 3)
+        float(np.mean(chunk)) if chunk.size > 0 else 0.0 for chunk in np.array_split(centroid, 3)
     ]
     if centroid_chunks:
         if centroid_chunks[-1] > centroid_chunks[0] * 1.15:
@@ -449,9 +447,7 @@ def _estimate_sections(
 
     chunk_count = 4 if rms.size >= 24 else 3
     chunk_labels = (
-        ["Intro", "Verse", "Chorus", "Outro"]
-        if chunk_count == 4
-        else ["Intro", "Main", "Lift"]
+        ["Intro", "Verse", "Chorus", "Outro"] if chunk_count == 4 else ["Intro", "Main", "Lift"]
     )
     energy_bands = np.array_split(rms, chunk_count)
     total_beats = max(4, int(round((waveform.size / TARGET_SAMPLE_RATE) * bpm / 60.0)))
@@ -471,14 +467,12 @@ def _estimate_sections(
         elif average_energy >= peak_energy * 0.45:
             energy = "medium"
             summary = (
-                "Balanced section that can carry the main groove without "
-                "overwhelming transitions."
+                "Balanced section that can carry the main groove without overwhelming transitions."
             )
         else:
             energy = "low"
             summary = (
-                "Lower-energy section that leaves room for buildup, lyric focus, "
-                "or negative space."
+                "Lower-energy section that leaves room for buildup, lyric focus, or negative space."
             )
 
         start_bar = int(bar_edges[index])

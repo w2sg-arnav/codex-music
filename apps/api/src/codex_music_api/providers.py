@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import mimetypes
 import os
+import re
 import tempfile
 import time
 from dataclasses import dataclass
@@ -20,6 +21,12 @@ if TYPE_CHECKING:
 
 AUDIO_SHAKE_BASE_URL = "https://api.audioshake.ai"
 FAL_ACE_STEP_APPLICATION = "fal-ai/ace-step/prompt-to-audio"
+STRICT_MUSIC_GENERATION_GUIDELINES = [
+    "Keep the arrangement section-aware with a clear intro, verse, chorus, and outro.",
+    "Favor singable melodic contour and stable harmonic center over novelty for its own sake.",
+    "Preserve emotional intent while keeping instrumentation coherent and mix-ready.",
+    "Avoid clipping, harsh transients, and overcrowded low-mid buildup in the prompt framing.",
+]
 
 
 def _stable_seed(value: str) -> int:
@@ -693,9 +700,7 @@ class LocalAudioAnalysisProvider(AnalysisProvider):
         )
         return AnalysisResult(
             analysis=analysis,
-            message=(
-                "Real BPM, key, chord, and arrangement analysis completed from source audio"
-            ),
+            message=("Real BPM, key, chord, and arrangement analysis completed from source audio"),
             provider=self.provider_name,
         )
 
@@ -1211,9 +1216,71 @@ def _find_target_audio_url(target: dict[str, Any]) -> str | None:
 def _prompt_from_context(context: ProjectContext) -> str:
     """Build the strongest prompt available from project context."""
 
+    return _enhance_prompt_text(_extract_prompt_intent(context))
+
+
+def _extract_prompt_intent(context: ProjectContext) -> str:
+    """Extract the creative prompt from a project context without metadata noise."""
+
     if context.source_notes:
-        return _enhance_prompt_text(context.source_notes)
-    return _enhance_prompt_text(context.name)
+        prompt_match = re.search(r"Prompt:\s*([^|]+)", context.source_notes, flags=re.IGNORECASE)
+        if prompt_match:
+            return prompt_match.group(1).strip()
+        reference_match = re.search(
+            r"Reference URL:\s*([^|]+)",
+            context.source_notes,
+            flags=re.IGNORECASE,
+        )
+        if reference_match:
+            return (
+                "Create a track guided by this reference while staying original: "
+                f"{reference_match.group(1).strip()}"
+            )
+        cleaned = context.source_notes.strip()
+        if cleaned:
+            return cleaned
+    return context.name
+
+
+def build_refined_prompt(
+    *,
+    base_prompt: str,
+    critic: CriticScores | None,
+    previous_enhanced_prompt: str | None,
+    iteration: int,
+) -> tuple[str, str]:
+    """Return a rewritten prompt and a short rewrite brief for the next iteration."""
+
+    suggestions = critic.notes if critic else []
+    rewrite_focus: list[str] = []
+    if critic:
+        if critic.fidelity < 7.8:
+            rewrite_focus.append("bring the result closer to the original intent and hook")
+        if critic.quality < 7.8:
+            rewrite_focus.append("strengthen melody, harmony, and section contrast")
+        if critic.emotion < 7.8:
+            rewrite_focus.append("increase emotional lift and memorable payoff")
+        if critic.production < 7.8:
+            rewrite_focus.append("clarify arrangement layers and improve mix balance")
+        if critic.technical < 7.8:
+            rewrite_focus.append("reduce technical risk such as clipping, masking, or harshness")
+
+    if not rewrite_focus:
+        rewrite_focus.append("tighten the arrangement while preserving the strongest ideas")
+
+    rewrite_brief = f"Iteration {iteration + 1} rewrite: " + "; ".join(rewrite_focus[:3]) + "."
+    enriched_prompt = " ".join(
+        [
+            base_prompt.strip(),
+            rewrite_brief,
+            "Refinement targets:",
+            " ".join(suggestions[:2]) if suggestions else "improve musical clarity and fidelity.",
+            f"Previous enhanced prompt anchor: {previous_enhanced_prompt}"
+            if previous_enhanced_prompt
+            else "",
+        ]
+    ).strip()
+    return enriched_prompt, rewrite_brief
 
 
 def _compose_enhanced_prompt(
@@ -1355,9 +1422,7 @@ def _build_critic_scores(
     quality = min(9.5, 6.8 + min(transient_strength, 0.25) * 8.0)
     emotion = min(
         9.2,
-        6.5
-        + (0.9 if len(arrangement_notes) >= 3 else 0.4)
-        + (0.4 if generated else 0.0),
+        6.5 + (0.9 if len(arrangement_notes) >= 3 else 0.4) + (0.4 if generated else 0.0),
     )
     production = min(
         9.1,
@@ -1365,9 +1430,7 @@ def _build_critic_scores(
     )
     technical = min(
         9.4,
-        6.6
-        + (0.8 if midi_ready else 0.2)
-        + (0.8 if len(chord_progression) >= 2 else 0.3),
+        6.6 + (0.8 if midi_ready else 0.2) + (0.8 if len(chord_progression) >= 2 else 0.3),
     )
     average = round((fidelity + quality + emotion + production + technical) / 5, 1)
 
