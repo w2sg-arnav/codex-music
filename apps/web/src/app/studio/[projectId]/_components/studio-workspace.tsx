@@ -6,7 +6,6 @@ import { useEffect, useEffectEvent, useMemo, useState, useTransition } from "rea
 
 import {
   type ProjectDetail,
-  type StackChoice,
   getProject,
   getProjectEventsUrl,
   getProjectExportBundleUrl,
@@ -32,17 +31,17 @@ const VIEW_OPTIONS: Array<{
 }> = [
   {
     id: "overview",
-    label: "Overview",
-    summary: "Everything present, analysis, jobs, and rights in one control-room view.",
+    label: "Project",
+    summary: "Generation loop, analysis, jobs, and export readiness.",
   },
   {
     id: "edit",
-    label: "Edit Deck",
-    summary: "Waveforms, stems, MIDI sketching, and the non-destructive timeline.",
+    label: "Edit",
+    summary: "Play the track, inspect stems, sketch MIDI, and edit the timeline.",
   },
   {
     id: "performance",
-    label: "Performance Deck",
+    label: "Performance",
     summary: "Conductr live generation, direction prompts, MIDI routing, and pads.",
   },
 ] as const;
@@ -55,7 +54,7 @@ function normalizeView(value: string | null): WorkspaceView {
   if (value === "performance" || value === "edit" || value === "overview") {
     return value;
   }
-  return "overview";
+  return "edit";
 }
 
 function statusTone(status: ProjectDetail["status"]) {
@@ -79,32 +78,6 @@ function criticTone(average: number | null | undefined) {
     return "neutral" as const;
   }
   return "offline" as const;
-}
-
-function workspaceSurfaces(project: ProjectDetail) {
-  const surfaces = [
-    "Upload, prompt, and reference intake",
-    "Integrated source review and spectrogram playback",
-    "Analysis, sections, and provider orchestration",
-    "Rights readiness and export bundle",
-    "Integrated Conductr performance deck",
-  ];
-
-  if (project.polished_audio_path) {
-    surfaces.push("Polished preview and A/B compare");
-  }
-  if (project.analysis.refinement_loop || project.source_type !== "upload") {
-    surfaces.push("Prompt enhancement, critic scoring, and surfaced generation versions");
-  }
-  if (project.stems.length > 0) {
-    surfaces.push("Stem mixer with lane playback");
-    surfaces.push("Non-destructive multitrack timeline");
-  }
-  if (project.analysis.midi_ready) {
-    surfaces.push("Browser MIDI sketch extraction");
-  }
-
-  return surfaces;
 }
 
 function PlaceholderCard({
@@ -131,10 +104,8 @@ function PlaceholderCard({
 
 export function StudioWorkspace({
   initialProject,
-  stackChoices,
 }: {
   initialProject: ProjectDetail;
-  stackChoices: StackChoice[];
 }) {
   const [project, setProject] = useState(initialProject);
   const [error, setError] = useState<string | null>(null);
@@ -144,12 +115,6 @@ export function StudioWorkspace({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeView = normalizeView(searchParams.get("view"));
-
-  const surfaceInventory = useMemo(() => workspaceSurfaces(project), [project]);
-  const liveStack = useMemo(
-    () => stackChoices.filter((choice) => choice.stage === "now").slice(0, 8),
-    [stackChoices],
-  );
   const refinementLoop = project.analysis.refinement_loop;
   const selectedVersion = useMemo(
     () =>
@@ -222,6 +187,23 @@ export function StudioWorkspace({
     });
   }
 
+  const mainPlayerTitle =
+    project.source_type === "upload" ? "Source Audio" : "Generated Track";
+  const mainPlayerReadyLabel =
+    project.source_type === "upload"
+      ? "Previewing the current source feeding prep and editing"
+      : "Previewing the generated track that landed in this workspace";
+  const mainPlayerEmptyLabel =
+    project.source_type === "upload"
+      ? "No source audio is available yet. Upload a file or run studio prep first."
+      : "No generated track is available yet. Run generation to create audio for this session.";
+  const mainPlayerDescription =
+    project.source_type === "upload"
+      ? "Use Play above or the audio controls below to audition the uploaded source."
+      : "Use Play above or the audio controls below to listen to the generated draft before editing.";
+  const primaryActionLabel =
+    project.source_type === "upload" || project.audio_path ? "Run studio prep" : "Generate track";
+
   async function handleRunPrep() {
     setError(null);
     try {
@@ -257,12 +239,12 @@ export function StudioWorkspace({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col px-6 pb-10 sm:px-10 lg:px-16">
+    <main className="mx-auto flex w-full max-w-[1480px] flex-1 flex-col px-6 pb-10 sm:px-10 lg:px-16">
       <section className="hero-panel rounded-[2rem] px-6 py-6 sm:px-8 lg:px-10">
-        <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_430px]">
+        <div className="relative z-10 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.08fr)_390px]">
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="eyebrow">Unified Studio Workspace</span>
+              <span className="eyebrow">Studio Session</span>
               <StatusPill label={project.status} tone={statusTone(project.status)} />
               <StatusPill label={project.primary_provider} tone="neutral" />
               <StatusPill
@@ -273,29 +255,18 @@ export function StudioWorkspace({
 
             <div className="space-y-4">
               <h1 className="max-w-5xl text-4xl font-semibold tracking-[-0.06em] text-stone-950 sm:text-5xl xl:text-6xl">
-                Edit, generate, and perform from one landscape control room.
+                {project.name}
               </h1>
               <p className="max-w-4xl text-base leading-7 text-stone-700 sm:text-lg">
                 {project.analysis.engine_mode === "ace-generate-edit"
-                  ? "Prompt or reference context feeds the generation bridge first, then the result lands in the same workspace for stems, playback, timeline editing, MIDI extraction, and live performance control."
-                  : "Imported audio now stays in the same workspace from prep through editing, MIDI sketching, and live performance control, instead of splitting the product into separate surfaces."}
+                  ? "Prompt or reference guidance generates audio first, then the selected version drops into the same workspace for playback, stems, timeline editing, MIDI sketching, and performance control."
+                  : "This session keeps uploaded audio in one place for listening, prep, stems, timeline editing, MIDI sketching, and export."}
               </p>
               {project.source_notes ? (
                 <div className="rounded-[1.25rem] border border-stone-300 bg-stone-100 px-4 py-4 text-sm leading-7 text-stone-700">
                   {project.source_notes}
                 </div>
               ) : null}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {surfaceInventory.map((surface) => (
-                <span
-                  key={surface}
-                  className="rounded-full border border-stone-300 bg-stone-100 px-3 py-1.5 text-xs font-medium tracking-[0.12em] text-stone-700 uppercase"
-                >
-                  {surface}
-                </span>
-              ))}
             </div>
           </div>
 
@@ -318,37 +289,9 @@ export function StudioWorkspace({
                 <div className="rounded-[1rem] border border-stone-300 bg-stone-100 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Now wired</p>
                   <p className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-stone-950">
-                    {liveStack.length}
+                    {VIEW_OPTIONS.length}
                   </p>
                 </div>
-              </div>
-            </article>
-
-            <article className="inventory-card rounded-[1.5rem] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="eyebrow">Everything Present</p>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                    One route, three decks
-                  </h2>
-                </div>
-                <StatusPill label={`${VIEW_OPTIONS.length} panels`} tone="neutral" />
-              </div>
-              <div className="mt-4 space-y-3">
-                {VIEW_OPTIONS.map((option) => (
-                  <div
-                    key={option.id}
-                    className="rounded-[1.1rem] border border-stone-300 bg-stone-100 px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="font-medium text-stone-900">{option.label}</p>
-                      {activeView === option.id ? (
-                        <StatusPill label="active" tone="online" />
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-sm leading-7 text-stone-700">{option.summary}</p>
-                  </div>
-                ))}
               </div>
             </article>
 
@@ -393,7 +336,7 @@ export function StudioWorkspace({
                   ? "Studio prep running..."
                   : isPending
                     ? "Refreshing..."
-                    : "Run studio prep"}
+                    : primaryActionLabel}
               </button>
             </div>
           </div>
@@ -442,66 +385,14 @@ export function StudioWorkspace({
       </section>
 
       {activeView === "overview" ? (
-        <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.1fr)_340px]">
-          <div className="space-y-6">
+        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0 space-y-6">
             <article className="glass-card rounded-[1.5rem] p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="eyebrow">Present Right Now</p>
+                  <p className="eyebrow">Project</p>
                   <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                    Live surfaces in this workspace
-                  </h2>
-                </div>
-                <StatusPill label={`${surfaceInventory.length} surfaces`} tone="neutral" />
-              </div>
-              <div className="mt-5 grid gap-3">
-                {surfaceInventory.map((surface) => (
-                  <div
-                    key={surface}
-                    className="rounded-[1.1rem] border border-stone-300 bg-stone-100 px-4 py-3 text-sm leading-7 text-stone-700"
-                  >
-                    {surface}
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="glass-card rounded-[1.5rem] p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="eyebrow">Finalized Stack</p>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                    Existing components we are leaning on
-                  </h2>
-                </div>
-                <StatusPill label={`${liveStack.length} now`} tone="neutral" />
-              </div>
-              <div className="mt-5 space-y-3">
-                {liveStack.map((choice) => (
-                  <div
-                    key={choice.capability}
-                    className="rounded-[1.1rem] border border-stone-300 bg-stone-100 p-4"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="font-medium text-stone-900">{choice.capability}</p>
-                      <StatusPill label={choice.runtime} tone="neutral" />
-                    </div>
-                    <p className="mt-2 text-sm leading-7 text-stone-700">
-                      {choice.selected_component}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </div>
-
-          <div className="space-y-6">
-            <article className="glass-card rounded-[1.5rem] p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="eyebrow">Music Intelligence</p>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                    Analysis layer
+                    Analysis and generation state
                   </h2>
                 </div>
                 <StatusPill label={project.analysis.engine_mode} tone="neutral" />
@@ -780,8 +671,9 @@ export function StudioWorkspace({
       ) : null}
 
       {activeView === "edit" ? (
-        <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
-          <div className="space-y-6">
+        <section className="mt-6 space-y-6">
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 space-y-6">
             {selectedVersion ? (
               <article className="glass-card rounded-[1.5rem] p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -829,13 +721,14 @@ export function StudioWorkspace({
               </article>
             ) : null}
 
-            <div className="grid gap-6 2xl:grid-cols-2">
+            <div className="grid min-w-0 gap-6 2xl:grid-cols-2">
               <WaveformPlayer
+                panelId="main-audio-player"
                 audioPath={project.audio_path}
-                title="Source Audio"
-                readyLabel="Previewing the current project source"
-                emptyLabel="No source audio is available yet. Run studio prep first."
-                description="This is the source feeding stems, analysis, cleanup, and export."
+                title={mainPlayerTitle}
+                readyLabel={mainPlayerReadyLabel}
+                emptyLabel={mainPlayerEmptyLabel}
+                description={mainPlayerDescription}
                 allowSpectrogram
               />
 
@@ -857,28 +750,28 @@ export function StudioWorkspace({
               )}
             </div>
 
-            <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
               <ABComparePlayer project={project} />
               <MidiLab project={project} />
             </div>
-
-            {project.stems.length > 0 ? (
-              <TimelineEditor
-                key={`${project.id}:${project.stems.length}:${project.audio_path ?? "none"}`}
-                project={project}
-              />
-            ) : (
-              <PlaceholderCard
-                eyebrow="Timeline Editor"
-                title="Multitrack regions are waiting on prep"
-                description="Run studio prep to populate stems, then the non-destructive clip editor will appear here."
-              />
-            )}
+            </div>
+            <div className="min-w-0 space-y-6">
+              <StemMixer project={project} />
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <StemMixer project={project} />
-          </div>
+          {project.stems.length > 0 ? (
+            <TimelineEditor
+              key={`${project.id}:${project.stems.length}:${project.audio_path ?? "none"}`}
+              project={project}
+            />
+          ) : (
+            <PlaceholderCard
+              eyebrow="Timeline Editor"
+              title="Multitrack regions are waiting on prep"
+              description="Run studio prep to populate stems, then the non-destructive clip editor will appear here."
+            />
+          )}
         </section>
       ) : null}
 

@@ -3,13 +3,14 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
-import { createProjectImport, runStudioPrep } from "@/lib/api";
+import { createProjectImport } from "@/lib/api";
 import { cacheProject } from "@/lib/project-cache";
 
 export function CreateProjectForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sourceType, setSourceType] = useState<"upload" | "reference" | "prompt">("upload");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,21 +22,15 @@ export function CreateProjectForm() {
     const upload = form.get("file");
     const hasUpload = upload instanceof File && upload.size > 0;
     const shouldAutoPrep = sourceType !== "upload" || hasUpload;
+    if (shouldAutoPrep) {
+      form.set("auto_prep", "true");
+    }
 
     try {
       const response = await createProjectImport(form);
-      let latestProject = response.project;
-      if (shouldAutoPrep) {
-        try {
-          const prepResponse = await runStudioPrep(response.project.id);
-          latestProject = prepResponse.project;
-        } catch {
-          // Keep the UX moving even if hosted prep fails; the workspace can recover.
-        }
-      }
-      cacheProject(latestProject);
+      cacheProject(response.project);
       startTransition(() => {
-        router.push(`/studio/${latestProject.id}`);
+        router.push(`/studio/${response.project.id}`);
       });
     } catch (submissionError) {
       setError(
@@ -52,11 +47,11 @@ export function CreateProjectForm() {
       <div className="mb-6">
         <p className="eyebrow">Create Project</p>
         <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-          Start from an upload, prompt, or reference.
+          Start a new music session.
         </h2>
         <p className="mt-3 max-w-xl text-sm leading-7 text-stone-700">
-          Create a project and jump into the studio. Uploads go straight into editing prep, while
-          prompt and reference projects can be used to kick off idea generation.
+          Upload audio to edit immediately, or generate a new draft from a prompt or reference.
+          Generated audio opens in the workspace player as soon as the session is ready.
         </p>
       </div>
 
@@ -75,12 +70,18 @@ export function CreateProjectForm() {
           Source type
           <select
             name="source_type"
-            defaultValue="upload"
+            value={sourceType}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === "upload" || value === "reference" || value === "prompt") {
+                setSourceType(value);
+              }
+            }}
             className="rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 outline-none transition focus:border-stone-900"
           >
-            <option value="upload">Audio upload</option>
-            <option value="reference">Reference session</option>
-            <option value="prompt">Prompt-led idea</option>
+            <option value="upload">Upload and edit</option>
+            <option value="reference">Generate from reference</option>
+            <option value="prompt">Generate from prompt</option>
           </select>
         </label>
       </div>
@@ -121,11 +122,16 @@ export function CreateProjectForm() {
           disabled={isSubmitting}
           className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
         >
-          {isSubmitting ? "Creating studio..." : "Create project"}
+          {isSubmitting
+            ? "Creating session..."
+            : sourceType === "upload"
+              ? "Create session"
+              : "Create and generate"}
         </button>
         <p className="max-w-xl text-sm leading-7 text-stone-600">
-          Uploads move into audio prep right away. Prompt and reference projects can use
-          generation features when those services are configured.
+          {sourceType === "upload"
+            ? "Uploads move into prep right away, then open in the edit workspace."
+            : "Prompt and reference sessions generate audio first, then land in the edit workspace where you can hit play immediately."}
         </p>
       </div>
 

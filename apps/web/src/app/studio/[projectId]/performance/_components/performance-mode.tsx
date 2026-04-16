@@ -575,7 +575,7 @@ export function PerformanceMode({
   return (
     <div
       id="performance-lane"
-      className={embedded ? "space-y-6" : "mx-auto flex w-full max-w-[1700px] flex-1 flex-col px-6 pb-10 sm:px-10 lg:px-16"}
+      className={embedded ? "space-y-6" : "mx-auto flex w-full max-w-[1480px] flex-1 flex-col px-6 pb-10 sm:px-10 lg:px-16"}
     >
       <section className="glass-card rounded-[1.75rem] px-6 py-6 sm:px-8">
         <div className="flex flex-wrap items-start justify-between gap-6">

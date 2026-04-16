@@ -7,14 +7,16 @@ import { resolveApiUrl } from "@/lib/api";
 
 export function WaveformPlayer({
   audioPath,
+  panelId,
   title = "Waveform",
-  description = "Playback uses wavesurfer.js on top of the uploaded project audio.",
+  description = "Use Play above or the browser audio controls below to audition this audio.",
   readyLabel = "Previewing project audio",
   emptyLabel = "No audio is available for this player yet.",
   allowSpectrogram = false,
   compact = false,
 }: {
   audioPath: string | null;
+  panelId?: string;
   title?: string;
   description?: string;
   readyLabel?: string;
@@ -121,7 +123,7 @@ export function WaveformPlayer({
   }
 
   return (
-    <div className="glass-card rounded-[1.5rem] p-5">
+    <div id={panelId} className="glass-card rounded-[1.5rem] p-5">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="eyebrow">{title}</p>

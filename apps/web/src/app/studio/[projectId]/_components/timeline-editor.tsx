@@ -14,7 +14,7 @@ import {
 
 const BEATS_PER_BAR = 4;
 const BASE_PIXELS_PER_BEAT = 18;
-const TRACK_LABEL_WIDTH = 208;
+const TRACK_LABEL_WIDTH = 176;
 const MIN_CLIP_BEATS = 1;
 
 type DragMode = "move" | "trim-start" | "trim-end";
@@ -390,8 +390,8 @@ export function TimelineEditor({ project }: { project: ProjectDetail }) {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
-        <div className="space-y-4">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-4">
             <div className="rounded-[1.25rem] border border-stone-200 bg-white/80 p-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -753,7 +753,7 @@ export function TimelineEditor({ project }: { project: ProjectDetail }) {
           </div>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-5">
             <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
               Selected clip
@@ -928,19 +928,6 @@ export function TimelineEditor({ project }: { project: ProjectDetail }) {
             </div>
           </div>
 
-          <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
-              Why this matters
-            </p>
-            <div className="mt-4 space-y-3 text-sm leading-7 text-stone-700">
-              <p>Generation is no longer the whole product once clips become editable regions.</p>
-              <p>Move and trim operations keep source offsets intact, which makes the edits non-destructive.</p>
-              <p>
-                Command-driven edits turn the timeline into an AI-native surface instead of
-                a passive review page.
-              </p>
-            </div>
-          </div>
         </aside>
       </div>
     </article>

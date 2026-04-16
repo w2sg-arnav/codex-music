@@ -44,6 +44,7 @@ ProjectSourceType = Annotated[Literal["upload", "prompt", "reference"], Form()]
 ProjectUpload = Annotated[UploadFile | None, File()]
 PromptText = Annotated[str | None, Form()]
 ReferenceUrl = Annotated[str | None, Form()]
+AutoPrep = Annotated[bool, Form()] 
 
 
 @router.get("", response_model=list[ProjectSummary])
@@ -126,10 +127,12 @@ def import_project(
     name: ProjectName,
     repository: ProjectRepository,
     storage: ProjectStorage,
+    runner: ProjectRunner,
     source_type: ProjectSourceType = "upload",
     file: ProjectUpload = None,
     prompt_text: PromptText = None,
     reference_url: ReferenceUrl = None,
+    auto_prep: AutoPrep = False,
 ) -> ProjectImportResponse:
     """Create a new project from dashboard input and optional audio upload."""
 
@@ -158,7 +161,7 @@ def import_project(
         else settings.audio_provider
     )
 
-    project = repository.create_project(
+    created_project = repository.create_project(
         project_id=project_id,
         name=name.strip(),
         source_type=source_type,
@@ -193,6 +196,14 @@ def import_project(
             ],
         ),
     )
+
+    if auto_prep:
+        if settings.job_execution_mode == "inline":
+            runner.run_now(project_id)
+        else:
+            runner.launch(project_id)
+
+    project = repository.get_project(project_id) or created_project
     return ProjectImportResponse(project=project)
 
 

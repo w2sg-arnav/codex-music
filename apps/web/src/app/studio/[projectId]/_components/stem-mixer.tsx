@@ -56,15 +56,18 @@ export function StemMixer({ project }: { project: ProjectDetail }) {
         </div>
       </div>
 
-      {isFallbackPreview ? (
-        <p className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-900">
-          Provider fallback is still using one shared preview asset for these lanes. Real isolated
-          stem files will replace this view automatically when provider-specific outputs are
-          available.
-        </p>
-      ) : null}
-
       <div className="mt-5 space-y-5">
+        {isFallbackPreview && project.audio_path ? (
+          <WaveformPlayer
+            audioPath={project.audio_path}
+            title="Current Mix Preview"
+            readyLabel="Use this player while isolated stem renders catch up"
+            emptyLabel="No mix preview is ready yet."
+            description="You can still listen to the current track here, then jump back into the timeline while isolated lanes finish preparing."
+            compact
+          />
+        ) : null}
+
         {project.stems.length > 0 ? (
           project.stems.map((stem) => {
             const status = laneStatus.get(stem.id) ?? { muted: false, focused: true };
@@ -127,6 +130,11 @@ export function StemMixer({ project }: { project: ProjectDetail }) {
                 ) : isMuted ? (
                   <div className="rounded-[1rem] border border-dashed border-stone-300 bg-white px-4 py-5 text-sm text-stone-600">
                     This lane is muted. Unmute it to resume playback and waveform inspection.
+                  </div>
+                ) : isFallbackPreview ? (
+                  <div className="rounded-[1rem] border border-dashed border-stone-300 bg-white px-4 py-5 text-sm text-stone-600">
+                    Isolated audio is still rendering for this lane. Use the current mix preview
+                    above while this stem catches up.
                   </div>
                 ) : (
                   <WaveformPlayer

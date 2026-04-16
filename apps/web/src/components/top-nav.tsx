@@ -4,15 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
-  { href: "/", label: "Overview" },
-  { href: "/studio", label: "Sessions" },
+  { href: "/studio", label: "Studio" },
 ];
 
 export function TopNav() {
   const pathname = usePathname();
+  const studioActive = pathname?.startsWith("/studio");
 
   return (
-    <header className="sticky top-0 z-40 mx-auto w-full max-w-[1700px] px-6 py-4 sm:px-10 lg:px-16">
+    <header className="sticky top-0 z-40 mx-auto w-full max-w-[1480px] px-6 py-4 sm:px-10 lg:px-16">
       <div className="glass-card flex items-center justify-between gap-4 rounded-full px-4 py-3 sm:px-6">
         <div className="flex items-center gap-4">
           <div className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-stone-100 text-sm font-semibold tracking-[0.2em] text-stone-900">
@@ -34,7 +34,7 @@ export function TopNav() {
               key={link.href}
               href={link.href}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                pathname === link.href || (link.href === "/studio" && pathname?.startsWith("/studio"))
+                (link.href === "/studio" && studioActive) || pathname === link.href
                   ? "border-stone-300 bg-stone-100 text-stone-900"
                   : "border-transparent text-stone-700 hover:border-stone-300 hover:bg-stone-100"
               }`}
@@ -48,7 +48,7 @@ export function TopNav() {
           href="/studio"
           className="rounded-full bg-stone-950 px-5 py-2.5 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
         >
-          Open Workspace
+          New Session
         </Link>
       </div>
     </header>
