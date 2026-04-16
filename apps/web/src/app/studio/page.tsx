@@ -12,11 +12,11 @@ import { ProjectList } from "./_components/project-list";
 export const dynamic = "force-dynamic";
 
 const STUDIO_SURFACES = [
-  "Project creation from upload, prompt, or reference",
-  "Project browser with cached recovery",
-  "Implementation plan visibility",
-  "Architecture map visibility",
-  "Deployment readiness surface",
+  "Create a project from an upload, prompt, or reference track",
+  "Browse saved sessions and jump back into recent work",
+  "See the next step for each project before opening it",
+  "Review available studio capabilities and connected tools",
+  "Check which local setup items still need attention",
 ] as const;
 
 export default async function StudioPage() {
@@ -35,22 +35,17 @@ export default async function StudioPage() {
           <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_0.95fr]">
             <div className="space-y-7">
               <div className="flex flex-wrap gap-3">
-                <span className="eyebrow">Studio Control Room</span>
+                <span className="eyebrow">Studio Dashboard</span>
                 <StatusPill label={`${projects.length} active sessions`} tone="neutral" />
-                <StatusPill
-                  label={deployment?.cloud_ready ? "cloud ready" : "cloud partial"}
-                  tone={deployment?.cloud_ready ? "online" : "neutral"}
-                />
               </div>
 
               <div className="space-y-5">
                 <h1 className="text-5xl leading-[0.94] font-semibold tracking-[-0.06em] text-stone-950 sm:text-6xl">
-                  Create, inspect, and route every music session from one web-native dashboard.
+                  Start projects, reopen sessions, and get back to editing faster.
                 </h1>
                 <p className="max-w-3xl text-lg leading-8 text-stone-700">
-                  This is the main operating surface for Codex Music: create new projects,
-                  open live workspaces, inspect the finalized stack, and understand what is
-                  already deployed versus what still needs hardening.
+                  Use this page to create a new project, open an existing workspace, and see what
+                  parts of the studio are ready to use before you dive into the editor.
                 </p>
               </div>
 
@@ -78,31 +73,35 @@ export default async function StudioPage() {
           <article className="glass-card rounded-[1.75rem] p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="eyebrow">Implementation Plan</p>
+                <p className="eyebrow">Studio Capabilities</p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                  Finalized build path
+                  Tools and flows available in this workspace
                 </h2>
               </div>
-              <StatusPill label={`${catalog?.implementation_phases.length ?? 0} phases`} tone="neutral" />
+              <StatusPill
+                label={`${catalog?.provider_capabilities.length ?? 0} items`}
+                tone="neutral"
+              />
             </div>
 
             <div className="mt-6 space-y-4">
-              {(catalog?.implementation_phases ?? []).map((phase) => (
+              {(catalog?.provider_capabilities ?? []).slice(0, 6).map((item) => (
                 <div
-                  key={phase.phase}
+                  key={item.capability}
                   className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-4"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="font-medium text-stone-900">{phase.phase}</p>
-                    <StatusPill label={phase.goal} tone="neutral" />
-                  </div>
-                  <div className="mt-3 space-y-2 text-sm leading-7 text-stone-700">
-                    {phase.deliverables.map((deliverable) => (
-                      <p key={deliverable}>{deliverable}</p>
-                    ))}
-                  </div>
+                  <p className="font-medium text-stone-900">{item.capability}</p>
+                  <p className="mt-2 text-sm leading-7 text-stone-700">
+                    {item.selected_component}
+                  </p>
                 </div>
               ))}
+              {!catalog?.provider_capabilities?.length ? (
+                <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
+                  Once the studio services are available, this area will show the tools connected
+                  to this workspace.
+                </div>
+              ) : null}
             </div>
           </article>
         </section>
@@ -111,12 +110,12 @@ export default async function StudioPage() {
           <article className="glass-card rounded-[1.75rem] p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="eyebrow">Architecture</p>
+                <p className="eyebrow">Workspace Sections</p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                  Dual-engine layout from input to export
+                  Main parts of the studio experience
                 </h2>
               </div>
-              <StatusPill label={`${architecture?.lanes.length ?? 0} lanes`} tone="neutral" />
+              <StatusPill label={`${architecture?.lanes.length ?? 0} sections`} tone="neutral" />
             </div>
 
             <div className="mt-6 space-y-4">
@@ -130,7 +129,7 @@ export default async function StudioPage() {
                       <p className="font-medium text-stone-900">{lane.lane}</p>
                       <p className="mt-1 text-sm text-stone-600">{lane.summary}</p>
                     </div>
-                    <StatusPill label={`${lane.components.length} blocks`} tone="neutral" />
+                    <StatusPill label={`${lane.components.length} tools`} tone="neutral" />
                   </div>
                   <div className="mt-4 space-y-3">
                     {lane.components.map((component) => (
@@ -150,24 +149,29 @@ export default async function StudioPage() {
                   </div>
                 </div>
               ))}
+              {!architecture?.lanes?.length ? (
+                <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
+                  This section will list the parts of the studio once workspace data is available.
+                </div>
+              ) : null}
             </div>
           </article>
 
           <article className="glass-card rounded-[1.75rem] p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="eyebrow">Deployment Readiness</p>
+                <p className="eyebrow">Setup Checklist</p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                  What still matters for production confidence
+                  Things to configure for the full studio workflow
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
                 <StatusPill
-                  label={deployment?.local_ready ? "local ready" : "local blocked"}
+                  label={deployment?.local_ready ? "ready" : "needs setup"}
                   tone={deployment?.local_ready ? "online" : "offline"}
                 />
                 <StatusPill
-                  label={deployment?.cloud_ready ? "cloud ready" : "cloud partial"}
+                  label={deployment?.cloud_ready ? "extended tools ready" : "some tools unavailable"}
                   tone={deployment?.cloud_ready ? "online" : "neutral"}
                 />
               </div>
@@ -200,6 +204,11 @@ export default async function StudioPage() {
                   ) : null}
                 </div>
               ))}
+              {!deployment?.access_requirements?.length ? (
+                <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 p-4 text-sm leading-7 text-stone-700">
+                  No extra setup items are being reported right now.
+                </div>
+              ) : null}
             </div>
           </article>
         </section>

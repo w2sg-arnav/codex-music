@@ -7,18 +7,18 @@ import { getStudioSnapshot } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
 const PRODUCT_SURFACES = [
-  "Prompt, upload, and reference-based project intake",
-  "Provider-backed studio prep with generation, stems, lyrics, analysis, and cleanup jobs",
-  "Source audio playback with waveform and spectrogram review",
-  "A/B compare between source and polished output",
-  "Stem mixer with lane-level monitoring",
-  "Non-destructive multitrack timeline editing with clip commands",
-  "Browser MIDI extraction and sketch export",
-  "Integrated performance deck with Web MIDI routing and performance analysis",
-  "Conductr-inspired procedural pattern generation inside the same workspace",
-  "Rights, provenance, and export readiness panels",
-  "ZIP export bundle generation",
-  "Public deployed web surface on Vercel",
+  "Create a project from a prompt, uploaded track, or reference idea",
+  "Run audio jobs for stem separation, lyrics, cleanup, and analysis",
+  "Preview your source audio with waveform and spectrogram views",
+  "Compare the original track against processed output",
+  "Balance stems in the mixer and monitor each lane",
+  "Edit clips on a multitrack timeline without overwriting the source",
+  "Extract MIDI in the browser and export sketches",
+  "Use the performance view with Web MIDI routing and analysis",
+  "Build patterns and musical ideas inside the same workspace",
+  "Review rights, provenance, and export details for a project",
+  "Export the current project as a ZIP bundle",
+  "Browse and reopen existing studio sessions",
 ] as const;
 
 const SYSTEM_METRICS = [
@@ -39,23 +39,17 @@ export default async function Home() {
           <div className="relative z-10 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-8">
               <div className="flex flex-wrap gap-3">
-                <span className="eyebrow">Open Studio System</span>
-                <StatusPill
-                  label={snapshot.api ? "api online" : "api offline"}
-                  tone={snapshot.api ? "online" : "offline"}
-                />
-                <StatusPill label="vercel deployed" tone="neutral" />
+                <span className="eyebrow">Codex Music</span>
               </div>
 
               <div className="space-y-5">
                 <h1 className="max-w-5xl text-5xl font-semibold tracking-[-0.06em] text-stone-950 sm:text-6xl lg:text-7xl">
-                  The AI-native music studio that actually feels like a product.
+                  Work on songs in one place with stems, timeline edits, playback, and MIDI tools.
                 </h1>
                 <p className="max-w-3xl text-lg leading-8 text-stone-700 sm:text-xl">
-                  Codex Music now combines generation, analysis, editing, MIDI, and
-                  Conductr-style performance in one live web surface. The goal of this
-                  redesign is simple: make the platform read like a polished company and
-                  a usable studio at the same time.
+                  Start a project, upload audio, run analysis jobs, adjust stems, edit clips on
+                  the timeline, compare versions, and move into performance or MIDI workflows from
+                  the same studio.
                 </p>
               </div>
 
@@ -95,28 +89,25 @@ export default async function Home() {
               <article className="inventory-card rounded-[1.5rem] p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="eyebrow">System Snapshot</p>
+                    <p className="eyebrow">Get Started</p>
                     <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-                      Current deployment state
+                      Where to begin in the studio
                     </h2>
                   </div>
-                  <span className="font-mono text-xs text-stone-500">
-                    {snapshot.api?.version ?? "not connected"}
-                  </span>
                 </div>
 
                 <div className="mt-5 space-y-4 text-sm leading-7 text-stone-700">
                   <div>
-                    <p className="font-medium text-stone-900">Target surface</p>
+                    <p className="font-medium text-stone-900">Start a project</p>
                     <p>
-                      {capabilities?.target_surface ??
-                        "Website scaffold is live and connected to the API where available."}
+                      Create a project from an upload, prompt, or reference, then move straight
+                      into playback, editing, and export tools.
                     </p>
                   </div>
                   <div>
-                    <p className="font-medium text-stone-900">Deployment targets</p>
+                    <p className="font-medium text-stone-900">Main tools</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {(capabilities?.deployment_targets ?? []).map((target) => (
+                      {["Timeline editing", "Stem mixing", "MIDI tools", "Performance mode", "Export"].map((target) => (
                         <span
                           key={target}
                           className="rounded-full border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm text-stone-700"
@@ -135,9 +126,9 @@ export default async function Home() {
         <section className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="eyebrow">Everything Present</p>
+              <p className="eyebrow">What You Can Do Today</p>
               <h2 className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-stone-950">
-                The deployed product surfaces you can use right now.
+                Features you can actually use in the current studio.
               </h2>
             </div>
             <StatusPill label={`${PRODUCT_SURFACES.length} live surfaces`} tone="neutral" />
@@ -159,9 +150,9 @@ export default async function Home() {
 
         <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <article className="glass-card rounded-[1.75rem] p-6">
-            <p className="eyebrow mb-4">Provider Stack</p>
+            <p className="eyebrow mb-4">Studio Tools</p>
             <h2 className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">
-              Reuse-first components, clearly exposed.
+              The main pieces available in this workspace.
             </h2>
             <div className="mt-6 space-y-3">
               {(capabilities?.provider_capabilities ?? []).slice(0, 8).map((item) => (
@@ -175,13 +166,19 @@ export default async function Home() {
                   </p>
                 </div>
               ))}
+              {!capabilities?.provider_capabilities?.length ? (
+                <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-4 py-4 text-sm leading-7 text-stone-700">
+                  Start a project to explore playback, editing, MIDI, and export features inside
+                  the studio.
+                </div>
+              ) : null}
             </div>
           </article>
 
           <article className="glass-card rounded-[1.75rem] p-6">
-            <p className="eyebrow mb-4">Open Sessions</p>
+            <p className="eyebrow mb-4">Recent Sessions</p>
             <h2 className="text-3xl font-semibold tracking-[-0.04em] text-stone-950">
-              Start from the demo or jump straight into your latest workspace.
+              Reopen your latest project and keep working.
             </h2>
             <div className="mt-6 space-y-3">
               {snapshot.projects.map((project) => (
@@ -201,6 +198,12 @@ export default async function Home() {
                   </div>
                 </Link>
               ))}
+              {!snapshot.projects.length ? (
+                <div className="rounded-[1.25rem] border border-stone-200 bg-stone-50 px-5 py-5 text-sm leading-7 text-stone-700">
+                  No projects yet. Create one from the studio page to start editing audio,
+                  generating ideas, or working with MIDI.
+                </div>
+              ) : null}
             </div>
           </article>
         </section>

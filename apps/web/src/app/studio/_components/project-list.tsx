@@ -34,7 +34,7 @@ export function ProjectList({ initialProjects }: { initialProjects: ProjectSumma
         <div>
           <p className="eyebrow">Projects</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-            Working sessions
+            Your sessions
           </h2>
         </div>
         <StatusPill label={`${projects.length} total`} tone="neutral" />
@@ -69,6 +69,12 @@ export function ProjectList({ initialProjects }: { initialProjects: ProjectSumma
             </div>
           </Link>
         ))}
+        {!projects.length ? (
+          <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5 text-sm leading-7 text-stone-700">
+            No projects yet. Create one from the form on this page to start working with audio,
+            MIDI, or generated ideas.
+          </div>
+        ) : null}
       </div>
     </>
   );

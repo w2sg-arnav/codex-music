@@ -52,11 +52,11 @@ export function CreateProjectForm() {
       <div className="mb-6">
         <p className="eyebrow">Create Project</p>
         <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-stone-950">
-          Start from upload, prompt, or reference context.
+          Start from an upload, prompt, or reference.
         </h2>
         <p className="mt-3 max-w-xl text-sm leading-7 text-stone-700">
-          Use this to move directly into the deployed product. Prompt and reference
-          sessions aim at the generation bridge; uploads move directly into editing prep.
+          Create a project and jump into the studio. Uploads go straight into editing prep, while
+          prompt and reference projects can be used to kick off idea generation.
         </p>
       </div>
 
@@ -124,8 +124,8 @@ export function CreateProjectForm() {
           {isSubmitting ? "Creating studio..." : "Create project"}
         </button>
         <p className="max-w-xl text-sm leading-7 text-stone-600">
-          Prompt and reference sessions route into the ACE-Step generation lane once
-          the fal key is configured. Upload sessions go straight into stem prep.
+          Uploads move into audio prep right away. Prompt and reference projects can use
+          generation features when those services are configured.
         </p>
       </div>
 
