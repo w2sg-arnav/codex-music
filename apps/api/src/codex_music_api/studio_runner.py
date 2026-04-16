@@ -13,6 +13,8 @@ from codex_music_api.providers import (
     ProviderStack,
     build_demo_provider_stack,
     build_refined_prompt,
+    critique_generation_candidate,
+    enhance_generation_prompt,
 )
 from codex_music_api.schemas import (
     AnalysisSummary,
@@ -237,7 +239,7 @@ class StudioPrepRunner:
                         id=f"job_{uuid4().hex[:12]}",
                         kind="prompt-enhancement",
                         status="queued",
-                        provider=self._settings.prompt_model_provider,
+                        provider=_effective_prompt_model(self._settings),
                         message="Queued prompt enhancement with strict music directives",
                         updated_at=timestamp,
                     ),
@@ -253,7 +255,7 @@ class StudioPrepRunner:
                         id=f"job_{uuid4().hex[:12]}",
                         kind="critic-loop",
                         status="queued",
-                        provider=self._settings.critic_model_provider,
+                        provider=_effective_critic_model(self._settings),
                         message="Queued critic scoring and auto-refinement loop",
                         updated_at=timestamp,
                     ),
@@ -295,7 +297,7 @@ class StudioPrepRunner:
                     id=f"job_{uuid4().hex[:12]}",
                     kind="critic",
                     status="queued",
-                    provider=self._settings.critic_model_provider,
+                    provider=_effective_critic_model(self._settings),
                     message="Queued critic scoring for the uploaded source",
                     updated_at=timestamp,
                 )
@@ -316,13 +318,28 @@ class StudioPrepRunner:
         """Run prompt enhancement, generation, critic scoring, and auto-refinement."""
 
         base_prompt = _prompt_intent_from_context(context)
+        prompt_model = (
+            self._settings.openai_model
+            if self._settings.openai_api_key
+            else self._settings.prompt_model_provider
+        )
+        critic_model = (
+            self._settings.openai_model
+            if self._settings.openai_api_key
+            else self._settings.critic_model_provider
+        )
         loop_summary = RefinementLoopSummary(
             status="running",
-            prompt_model=self._settings.prompt_model_provider,
-            critic_model=self._settings.critic_model_provider,
+            prompt_model=prompt_model,
+            critic_model=critic_model,
             threshold=self._settings.refinement_threshold,
             max_iterations=self._settings.refinement_max_iterations,
             strict_guidelines=STRICT_MUSIC_GENERATION_GUIDELINES,
+        )
+        prompt_enhancement = enhance_generation_prompt(
+            base_prompt,
+            openai_api_key=self._settings.openai_api_key,
+            model=self._settings.openai_model,
         )
 
         self._set_job_state(
@@ -336,10 +353,7 @@ class StudioPrepRunner:
                 "refinement_loop": loop_summary,
                 "bridge_notes": project.analysis.bridge_notes
                 + [
-                    (
-                        "Prompt enhancer is translating the user's intent into a "
-                        "structured music brief."
-                    ),
+                    *prompt_enhancement.notes,
                     "Versions that pass the critic threshold will be surfaced before editing.",
                 ],
             }
@@ -360,7 +374,7 @@ class StudioPrepRunner:
         generation_candidates: list[
             tuple[ProjectContext, GenerationResult, AnalysisSummary, int | None]
         ] = []
-        current_prompt = base_prompt
+        current_prompt = prompt_enhancement.prompt
         selected_index = 0
         best_score = -1.0
 
@@ -409,19 +423,33 @@ class StudioPrepRunner:
                 lyric_provider_name=self._settings.critic_model_provider,
             )
             candidate_analysis = loop_analysis_result.analysis
-            critic = candidate_analysis.critic
+            critique_guidance = critique_generation_candidate(
+                base_prompt=base_prompt,
+                current_prompt=current_prompt,
+                enhanced_prompt=generation_result.enhanced_prompt,
+                candidate_analysis=candidate_analysis,
+                openai_api_key=self._settings.openai_api_key,
+                model=self._settings.openai_model,
+            )
+            critic = critique_guidance.critic if critique_guidance else candidate_analysis.critic
+            if critique_guidance:
+                candidate_analysis = candidate_analysis.model_copy(update={"critic": critic})
             critic_score = critic.average if critic else 0.0
             passed_threshold = bool(
                 critic and critic.average >= self._settings.refinement_threshold
             )
             rewrite_brief: str | None = None
             if not passed_threshold and iteration < self._settings.refinement_max_iterations:
-                current_prompt, rewrite_brief = build_refined_prompt(
-                    base_prompt=base_prompt,
-                    critic=critic,
-                    previous_enhanced_prompt=generation_result.enhanced_prompt,
-                    iteration=iteration,
-                )
+                if critique_guidance and critique_guidance.rewrite_prompt:
+                    current_prompt = critique_guidance.rewrite_prompt
+                    rewrite_brief = critique_guidance.rewrite_brief
+                else:
+                    current_prompt, rewrite_brief = build_refined_prompt(
+                        base_prompt=base_prompt,
+                        critic=critic,
+                        previous_enhanced_prompt=generation_result.enhanced_prompt,
+                        iteration=iteration,
+                    )
 
             version = GenerationVersion(
                 id=f"{project_id}_version_{iteration}",
@@ -433,7 +461,13 @@ class StudioPrepRunner:
                 critic=critic,
                 passed_threshold=passed_threshold,
                 rewrite_brief=rewrite_brief,
-                improvement_suggestions=critic.notes if critic else [],
+                improvement_suggestions=(
+                    critique_guidance.improvement_suggestions
+                    if critique_guidance
+                    else critic.notes
+                    if critic
+                    else []
+                ),
                 selected_for_editing=False,
             )
             versions.append(version)
@@ -723,8 +757,8 @@ def seed_demo_project(
             "lyric_excerpt": lyrics_result.lyric_excerpt,
             "refinement_loop": RefinementLoopSummary(
                 status="passed",
-                prompt_model=settings.prompt_model_provider,
-                critic_model=settings.critic_model_provider,
+                prompt_model=_effective_prompt_model(settings),
+                critic_model=_effective_critic_model(settings),
                 threshold=settings.refinement_threshold,
                 max_iterations=settings.refinement_max_iterations,
                 strict_guidelines=STRICT_MUSIC_GENERATION_GUIDELINES,
@@ -781,7 +815,7 @@ def seed_demo_project(
                     id="job_demo_prompt_enhancement",
                     kind="prompt-enhancement",
                     status="completed",
-                    provider=settings.prompt_model_provider,
+                    provider=_effective_prompt_model(settings),
                     message="Prompt enhancer translated the demo brief into a stricter music plan.",
                     updated_at=now,
                 ),
@@ -797,7 +831,7 @@ def seed_demo_project(
                     id="job_demo_critic_loop",
                     kind="critic-loop",
                     status="completed",
-                    provider=settings.critic_model_provider,
+                    provider=_effective_critic_model(settings),
                     message="Critic approved the surfaced demo version for editor handoff.",
                     updated_at=now,
                 ),
@@ -860,7 +894,7 @@ def seed_demo_project(
                 id="job_demo_prompt_enhancement",
                 kind="prompt-enhancement",
                 status="completed",
-                provider=settings.prompt_model_provider,
+                provider=_effective_prompt_model(settings),
                 message="Prompt enhancer translated the demo brief into a stricter music plan.",
                 updated_at=now,
             ),
@@ -876,7 +910,7 @@ def seed_demo_project(
                 id="job_demo_critic_loop",
                 kind="critic-loop",
                 status="completed",
-                provider=settings.critic_model_provider,
+                provider=_effective_critic_model(settings),
                 message="Critic approved the surfaced demo version for editor handoff.",
                 updated_at=now,
             ),
@@ -960,6 +994,18 @@ def _truncate_text(value: str, limit: int) -> str:
     if len(value) <= limit:
         return value
     return value[: limit - 1].rstrip() + "…"
+
+
+def _effective_prompt_model(settings: Settings) -> str:
+    """Return the active prompt enhancer label for the current environment."""
+
+    return settings.openai_model if settings.openai_api_key else settings.prompt_model_provider
+
+
+def _effective_critic_model(settings: Settings) -> str:
+    """Return the active critic label for the current environment."""
+
+    return settings.openai_model if settings.openai_api_key else settings.critic_model_provider
 
 
 def _build_rights(provenance_backend: str) -> RightsSummary:

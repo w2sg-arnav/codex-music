@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import mimetypes
 import os
 import re
@@ -27,6 +28,51 @@ STRICT_MUSIC_GENERATION_GUIDELINES = [
     "Preserve emotional intent while keeping instrumentation coherent and mix-ready.",
     "Avoid clipping, harsh transients, and overcrowded low-mid buildup in the prompt framing.",
 ]
+OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
+ACE_ENHANCER_SYSTEM_PROMPT = """You build structured production prompts for AI music generation.
+
+Return JSON only with this schema:
+{
+  "ace_input": {
+    "prompt": "detailed production-ready prompt"
+  },
+  "notesFromUser": ["short note", "short note"]
+}
+
+Rules:
+- Keep the arrangement section-aware.
+- Mention genre, mood, arrangement arc, instrumentation, and mix direction.
+- Keep the output concise, specific, and directly usable for generation.
+"""
+MUSIC_CRITIC_SYSTEM_PROMPT = """You are an expert music critic agent.
+
+Assess generated music across exactly five dimensions:
+1) fidelity to intent
+2) musical quality
+3) emotional impact
+4) production and mixing quality
+5) technical integrity
+
+Return JSON only with this schema:
+{
+  "scores": {
+    "fidelity": 0-10,
+    "quality": 0-10,
+    "emotion": 0-10,
+    "production": 0-10,
+    "technical": 0-10
+  },
+  "average": 0-10,
+  "verdict": "approve|refine",
+  "notes": "short diagnosis",
+  "improvements": ["concrete action 1", "concrete action 2"],
+  "refinement": {
+    "prompt": "revised detailed generation prompt"
+  }
+}
+
+Be strict, actionable, and coherent with the original intent.
+"""
 
 
 def _stable_seed(value: str) -> int:
@@ -97,6 +143,26 @@ class CleanupResult:
     polished_audio_path: str
     polished_audio_content_type: str
     message: str
+    provider: str
+
+
+@dataclass(slots=True)
+class PromptEnhancementResult:
+    """Structured prompt enhancement output for generation."""
+
+    prompt: str
+    notes: list[str]
+    provider: str
+
+
+@dataclass(slots=True)
+class CritiqueGuidance:
+    """Structured critic output with refinement guidance for the next iteration."""
+
+    critic: CriticScores
+    rewrite_prompt: str | None
+    rewrite_brief: str | None
+    improvement_suggestions: list[str]
     provider: str
 
 
@@ -1283,6 +1349,102 @@ def build_refined_prompt(
     return enriched_prompt, rewrite_brief
 
 
+def enhance_generation_prompt(
+    base_prompt: str,
+    *,
+    openai_api_key: str,
+    model: str,
+) -> PromptEnhancementResult:
+    """Build a stronger generation prompt with OpenAI, or fall back heuristically."""
+
+    fallback_prompt = _enhance_prompt_text(base_prompt)
+    if not openai_api_key:
+        return PromptEnhancementResult(
+            prompt=fallback_prompt,
+            notes=[
+                "Heuristic prompt enhancer translated the request into a structured music brief."
+            ],
+            provider="heuristic-director",
+        )
+
+    try:
+        payload = _call_openai_json(
+            api_key=openai_api_key,
+            model=model,
+            system_prompt=ACE_ENHANCER_SYSTEM_PROMPT,
+            user_payload={
+                "prompt": base_prompt,
+                "strict_guidelines": STRICT_MUSIC_GENERATION_GUIDELINES,
+            },
+        )
+        ace_input = payload.get("ace_input") if isinstance(payload, dict) else None
+        enhanced_prompt = (
+            _string_or_none(ace_input.get("prompt")) if isinstance(ace_input, dict) else None
+        )
+        notes = (
+            [
+                note.strip()
+                for note in payload.get("notesFromUser", [])
+                if isinstance(note, str) and note.strip()
+            ]
+            if isinstance(payload, dict)
+            else []
+        )
+        return PromptEnhancementResult(
+            prompt=enhanced_prompt or fallback_prompt,
+            notes=notes[:4] or ["OpenAI prompt enhancer prepared a structured generation brief."],
+            provider=model,
+        )
+    except Exception:
+        return PromptEnhancementResult(
+            prompt=fallback_prompt,
+            notes=[
+                "OpenAI prompt enhancement was unavailable, so the heuristic music brief was used."
+            ],
+            provider="heuristic-director",
+        )
+
+
+def critique_generation_candidate(
+    *,
+    base_prompt: str,
+    current_prompt: str,
+    enhanced_prompt: str,
+    candidate_analysis: AnalysisSummary,
+    openai_api_key: str,
+    model: str,
+) -> CritiqueGuidance | None:
+    """Return structured critic feedback and optional rewrite guidance."""
+
+    if not openai_api_key:
+        return None
+
+    try:
+        payload = _call_openai_json(
+            api_key=openai_api_key,
+            model=model,
+            system_prompt=MUSIC_CRITIC_SYSTEM_PROMPT,
+            user_payload={
+                "base_prompt": base_prompt,
+                "current_prompt": current_prompt,
+                "enhanced_prompt": enhanced_prompt,
+                "analysis": {
+                    "bpm": candidate_analysis.bpm,
+                    "musical_key": candidate_analysis.musical_key,
+                    "chord_progression": candidate_analysis.chord_progression,
+                    "arrangement_notes": candidate_analysis.arrangement_notes,
+                    "reference_constraints": candidate_analysis.reference_constraints,
+                    "bridge_notes": candidate_analysis.bridge_notes,
+                    "midi_ready": candidate_analysis.midi_ready,
+                },
+                "strict_guidelines": STRICT_MUSIC_GENERATION_GUIDELINES,
+            },
+        )
+        return _normalize_critique_guidance(payload, model=model)
+    except Exception:
+        return None
+
+
 def _compose_enhanced_prompt(
     prompt: str,
     *,
@@ -1371,6 +1533,143 @@ def _match_prompt_terms(prompt: str, mapping: dict[str, list[str]]) -> list[str]
         if any(keyword in prompt for keyword in keywords):
             matches.append(label)
     return matches
+
+
+def _call_openai_json(
+    *,
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Call the OpenAI chat completions API and parse the JSON response body."""
+
+    with httpx.Client(timeout=60) as client:
+        response = client.post(
+            OPENAI_CHAT_COMPLETIONS_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "temperature": 0.2,
+                "max_tokens": 900,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": json.dumps(user_payload)},
+                ],
+            },
+        )
+        response.raise_for_status()
+
+    content = _extract_openai_text(response.json())
+    parsed = _parse_json_object(content)
+    if not isinstance(parsed, dict):
+        raise ValueError("OpenAI did not return a valid JSON object.")
+    return parsed
+
+
+def _extract_openai_text(payload: dict[str, Any]) -> str:
+    """Extract the assistant text from one OpenAI chat completions payload."""
+
+    choice = payload.get("choices", [{}])[0]
+    message = choice.get("message", {})
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = _string_or_none(item.get("text"))
+                if text:
+                    parts.append(text)
+        return "\n".join(parts)
+    raise ValueError("OpenAI response did not include assistant text.")
+
+
+def _parse_json_object(raw_text: str) -> dict[str, Any] | None:
+    """Parse a JSON object from raw model text, stripping code fences when needed."""
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _normalize_critique_guidance(
+    payload: dict[str, Any],
+    *,
+    model: str,
+) -> CritiqueGuidance:
+    """Normalize one raw critic payload into the typed project model."""
+
+    scores_payload = payload.get("scores", {})
+    fidelity = _clamp_score(scores_payload.get("fidelity"))
+    quality = _clamp_score(scores_payload.get("quality"))
+    emotion = _clamp_score(scores_payload.get("emotion"))
+    production = _clamp_score(scores_payload.get("production"))
+    technical = _clamp_score(scores_payload.get("technical"))
+    average = round(
+        _clamp_score(
+            payload.get("average"),
+            fallback=(fidelity + quality + emotion + production + technical) / 5,
+        ),
+        1,
+    )
+    verdict = (
+        "Strong draft"
+        if _string_or_none(payload.get("verdict")) == "approve"
+        else "Needs refinement"
+    )
+    diagnosis = _string_or_none(payload.get("notes"))
+    improvements = [
+        item.strip()
+        for item in payload.get("improvements", [])
+        if isinstance(item, str) and item.strip()
+    ][:4]
+    notes = ([diagnosis] if diagnosis else []) + improvements
+    refinement = payload.get("refinement", {})
+    rewrite_prompt = (
+        _string_or_none(refinement.get("prompt")) if isinstance(refinement, dict) else None
+    )
+    rewrite_brief = (
+        f"LLM refinement: {diagnosis}" if diagnosis else "LLM refinement requested another pass."
+    )
+    return CritiqueGuidance(
+        critic=CriticScores(
+            fidelity=fidelity,
+            quality=quality,
+            emotion=emotion,
+            production=production,
+            technical=technical,
+            average=average,
+            verdict=verdict,
+            notes=notes or ["Critic requested another refinement pass."],
+        ),
+        rewrite_prompt=rewrite_prompt,
+        rewrite_brief=rewrite_brief if rewrite_prompt else None,
+        improvement_suggestions=improvements or notes,
+        provider=model,
+    )
+
+
+def _clamp_score(value: Any, *, fallback: float = 0.0) -> float:
+    """Clamp one score into the supported 0-10 range."""
+
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = fallback
+    return max(0.0, min(10.0, numeric))
 
 
 def _constraints_from_tags(tags: str | None) -> list[str]:
